@@ -4,7 +4,7 @@ from time import sleep
 
 rng = np.random.default_rng(seed=43)
 
-N: int = 4
+N: int = 3
 
 # Initial node
 l_0 = rng.integers(low=0, high=N)
@@ -12,12 +12,6 @@ l_0 = rng.integers(low=0, high=N)
 # graph G(N,(j,i)) as a matrix
 G: NDArray[np.float64] = rng.random(size=(N, N))
 np.fill_diagonal(G, 0.0)
-
-kappa = np.zeros((N, N))
-kappa[2][3] = G[2][3]
-kappa[3][2] = G[3][2]
-
-G = G - kappa
 
 # Q: Total burned nodes vector
 Q: NDArray[np.int64] = np.zeros(N, dtype=np.int64)

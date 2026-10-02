@@ -4,6 +4,8 @@ venv/
 env/
 ENV/
 
+GEMINI.md
+
 # Python bytecode y caches
 __pycache__/
 *.py[cod]
