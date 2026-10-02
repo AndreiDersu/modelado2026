@@ -2,6 +2,10 @@ import numpy as np
 from numpy.typing import NDArray
 from time import sleep
 
+"""
+Ejemplo simple de la propagación del fuego a través del tiempo en caso de no intervención de los bomberos. En este ejemplo el grafo es de 4 nodos
+"""
+
 rng = np.random.default_rng(seed=43)
 
 N: int = 4

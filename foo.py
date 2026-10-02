@@ -1,6 +1,11 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 
+"""
+Código ejemplo para generar grafos y visualizarlos, solo una prueba
+
+"""
+
 # 1. Crear el grafo dirigido múltiple con 5 nodos
 G = nx.MultiDiGraph()
 

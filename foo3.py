@@ -3,9 +3,13 @@ from time import sleep
 import numpy as np
 from numpy.typing import NDArray
 
+"""
+Lo mismo que el archivo foo2.py, pero ahora con los datos oficiales. EN este ejemplo se usa el grafico 6.
+"""
+
 rng = np.random.default_rng()
 
-# Código vibe codeado
+# Código IA
 # --------------------------------------------------
 BASE_DIR: Path = Path(__file__).resolve().parent
 GRAPH_FILE: Path = (
@@ -74,10 +78,11 @@ def cargar_probabilidades_iniciales(ruta_archivo: Path, n: int) -> NDArray[np.fl
     return probs
 
 
-# Fin del código vibecodeado ---------------------------------------------------------------------------------
+# Fin del código IA ---------------------------------------------------------------------------------
 
 # Cargar número de nodos N y matriz G desde los datos del grafo
 N, G = cargar_grafo(GRAPH_FILE)
+T: int = 5
 
 # Initial node
 prob_0: NDArray[np.float64] = cargar_probabilidades_iniciales(INICIO_FILE, N)
@@ -132,7 +137,7 @@ def main() -> None:
     print(f"{I_t=}")
 
     t: int = 1
-    while np.any(I_t):
+    while np.any(I_t) or t != T:
         Q, I_t, delta = step(Q, I_t)
         print("-" * 50)
         print(f"t={t}")
