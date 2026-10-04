@@ -2,7 +2,7 @@ import numpy as np
 from itertools import combinations
 from numpy.typing import NDArray
 
-from foo3 import monte_carlo, firecut
+from wildfire_simulator import monte_carlo, firecut
 from loaddata import quickstart
 
 N, G, prob_0, rng, seed, graph_name = quickstart()
@@ -44,7 +44,7 @@ def undirected_edges(n: int, g: NDArray[np.float64]) -> list[tuple[int, int]]:
     return edges
 
 
-def prevention_algorithm(
+def first_filter(
     n: int, p0: NDArray[np.float64], g: NDArray[np.float64], top: int = 50, k: int = 4
 ) -> list:
     """
@@ -84,7 +84,14 @@ def set_firewall(m: NDArray[np.float64], candidate: list, verbose=False):
     return firecut(m, cuts)
 
 
-def firewall_algorithm(tries: int = 10_000, endtime: int = 2, ncandidates: int = 20):
+def firewall_algorithm(
+    tries: int = 10_000,
+    endtime: int = 2,
+    ncandidates: int = 20,
+    n: int = N,
+    p0=prob_0,
+    g=G,
+):
     """
     Primero, evalua las mejores matrices de probabilidad G' con k cortafuegos establecidos a partir de la cota superior de riesgo y la primera fase de filtrado de candidatos
 
@@ -92,28 +99,30 @@ def firewall_algorithm(tries: int = 10_000, endtime: int = 2, ncandidates: int =
 
     """
 
-    candidates = prevention_algorithm(n=N, p0=prob_0, g=G, top=ncandidates)
+    candidates = first_filter(n=n, p0=p0, g=g, top=ncandidates)
 
     result: NDArray = np.empty(ncandidates)
     for i in range(0, len(candidates)):
-        g = set_firewall(G, candidates[i])
-        mean, median = monte_carlo(tries=tries, endtime=endtime, g=g)
+        g_cut = set_firewall(g, candidates[i])
+        mean, median = monte_carlo(tries=tries, endtime=endtime, g=g_cut)
 
         result[i] = mean
 
     bestidx: int = int(result.argmin())
-    # print(f"{best}\n{candidates[bestidx]}")
 
     return bestidx, float(result.min()), candidates[bestidx][1]
 
 
 if __name__ == "__main__":
     ncandidates = 100
+    tries = 1_000
 
-    print("Calculando... Esto puede llevar unos momentos")
+    print("Calculando... Esto puede llevar algunos segundos")
 
-    index, median, candidates = firewall_algorithm(ncandidates=ncandidates)
+    index, median, candidates = firewall_algorithm(tries=tries, ncandidates=ncandidates)
+
+    print("\033[H\033[2J", end="")
 
     print(
-        f"Semilla:{seed}\nGrafica{graph_name}\nIndice: {index}\nDaño medio: {median}\nCortafuegos: {candidates}"
+        f"Semilla:{seed}\nGrafica: {graph_name}\nTiradas Monta carlo{tries}\nNumero de candidatos{ncandidates}\n\nIndice del candidato: {index}\nDaño medio: {median}\nCortafuegos elegido: {candidates}"
     )

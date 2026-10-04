@@ -1,20 +1,127 @@
+from __future__ import annotations
+
 from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+# ==============================================================================
+# CONFIGURACIÓN GENERAL
+# ==============================================================================
+RNG_SEED: int = 67
 
-RNG_SEED = 67
+# Catálogo de los 6 ejemplos de grafos disponibles en Datos/
+EJEMPLOS_GRAFOS: dict[int, str] = {
+    3: "graph_003_probs.txt",
+    4: "graph_004_probs.txt",
+    5: "graph_005_probs.txt",
+    7: "graph_007_probs.txt",
+    8: "graph_008_probs.txt",
+    10: "graph_010_probs.txt",
+}
 
-GRAPH_NAME: str = "graph_005_probs"
+# Lista ordenada de los grafos (permite selección por índice 0 a 5):
+LISTA_GRAFOS: list[str] = [
+    "graph_003_probs.txt",  # [0] Grafo 3
+    "graph_004_probs.txt",  # [1] Grafo 4
+    "graph_005_probs.txt",  # [2] Grafo 5
+    "graph_007_probs.txt",  # [3] Grafo 7
+    "graph_008_probs.txt",  # [4] Grafo 8
+    "graph_010_probs.txt",  # [5] Grafo 10
+]
+
+# ==============================================================================
+# SELECCIÓN DE LA GRÁFICA (CAMBIA AQUÍ FÁCILMENTE)
+# ==============================================================================
+# Puedes cambiar esta variable para elegir cualquiera de los 6 ejemplos:
+#   - Por ID/Número:  3, 4, 5, 7, 8, 10
+#   - Por índice:     0, 1, 2, 3, 4, 5  (0->003, 1->004, 2->005, 3->007, etc.)
+#   - Por nombre:     "graph_005_probs", "graph_005_probs.txt", "005", etc.
+# ==============================================================================
+GRAFICA_SELECCIONADA: int | str = 5  # <-- ¡CAMBIA ESTE VALOR PARA CAMBIAR DE GRAFO!
+
 
 BASE_DIR: Path = Path(__file__).resolve().parent
-GRAPH_FILE: Path = (
-    BASE_DIR / "Datos" / GRAPH_NAME
-    if (BASE_DIR / "Datos" / GRAPH_NAME).is_file()
-    else BASE_DIR / "Datos" / "graph_010_probs.txt"
+
+# Archivo de probabilidades iniciales
+INICIO_FILE: Path = (
+    BASE_DIR / "Datos" / "inicio.txt"
+    if (BASE_DIR / "Datos" / "inicio.txt").is_file()
+    else BASE_DIR / "Datos" / "Datos" / "inicio.txt"
 )
 
-INICIO_FILE: Path = BASE_DIR / "Datos" / "Datos" / "inicio.txt"
+
+def resolver_archivo_grafo(seleccion: int | str | Path) -> tuple[Path, str]:
+    """Resuelve la ruta completa y el nombre base de la gráfica a partir de un ID,
+    índice, nombre o Path.
+
+    Opciones admitidas:
+      - Entero ID: 3, 4, 5, 7, 8, 10
+      - Entero índice: 0 a 5 (mapeados a LISTA_GRAFOS)
+      - Cadena con número: "3", "003", "10", etc.
+      - Cadena con nombre: "graph_005_probs", "graph_005_probs.txt", etc.
+      - Objeto Path directo
+
+    Returns:
+        (ruta_archivo, nombre_stem)
+    """
+    datos_dir = BASE_DIR / "Datos"
+
+    if isinstance(seleccion, Path):
+        if seleccion.is_file():
+            return seleccion, seleccion.stem
+        candidato = datos_dir / seleccion.name
+        if candidato.is_file():
+            return candidato, candidato.stem
+
+    if isinstance(seleccion, int):
+        if seleccion in EJEMPLOS_GRAFOS:
+            archivo = EJEMPLOS_GRAFOS[seleccion]
+            return datos_dir / archivo, Path(archivo).stem
+        if 0 <= seleccion < len(LISTA_GRAFOS):
+            archivo = LISTA_GRAFOS[seleccion]
+            return datos_dir / archivo, Path(archivo).stem
+        raise ValueError(
+            f"Grafo no válido: {seleccion}. "
+            f"Opciones válidas por ID: {list(EJEMPLOS_GRAFOS.keys())} "
+            f"o por índice: 0 a {len(LISTA_GRAFOS) - 1}."
+        )
+
+    sel_str = str(seleccion).strip()
+
+    if sel_str.isdigit():
+        val = int(sel_str)
+        if val in EJEMPLOS_GRAFOS:
+            archivo = EJEMPLOS_GRAFOS[val]
+            return datos_dir / archivo, Path(archivo).stem
+        if 0 <= val < len(LISTA_GRAFOS):
+            archivo = LISTA_GRAFOS[val]
+            return datos_dir / archivo, Path(archivo).stem
+
+    # Archivo exacto en Datos/
+    if (datos_dir / sel_str).is_file():
+        ruta = datos_dir / sel_str
+        return ruta, ruta.stem
+
+    # Archivo con .txt agregado
+    if (datos_dir / f"{sel_str}.txt").is_file():
+        ruta = datos_dir / f"{sel_str}.txt"
+        return ruta, Path(sel_str).stem
+
+    # Búsqueda difusa en la lista conocida
+    sel_clean = sel_str.lower().removesuffix(".txt")
+    for archivo in LISTA_GRAFOS:
+        stem = Path(archivo).stem
+        if sel_clean == stem or sel_clean in stem:
+            return datos_dir / archivo, stem
+
+    raise FileNotFoundError(
+        f"No se encontró el archivo de grafo para '{seleccion}'. "
+        f"Opciones válidas: {list(EJEMPLOS_GRAFOS.keys())} o nombres: {LISTA_GRAFOS}"
+    )
+
+
+# Resolución inicial para variables a nivel de módulo
+GRAPH_FILE, GRAPH_NAME = resolver_archivo_grafo(GRAFICA_SELECCIONADA)
 
 
 def cargar_grafo(ruta_archivo: Path) -> tuple[int, NDArray[np.float64]]:
@@ -70,14 +177,52 @@ def cargar_probabilidades_iniciales(ruta_archivo: Path, n: int) -> NDArray[np.fl
     return probs
 
 
-def quickstart(rng_seed: "int|None" = RNG_SEED):
-
-    if RNG_SEED is not None:
-        rng = np.random.default_rng(RNG_SEED)
+def quickstart(
+    rng_seed: int | None = RNG_SEED,
+    graph: int | str | Path | None = None,
+    **kwargs: object,
+) -> tuple[
+    int, NDArray[np.float64], NDArray[np.float64], np.random.Generator, int | None, str
+]:
+    if rng_seed is not None:
+        rng = np.random.default_rng(rng_seed)
     else:
         rng = np.random.default_rng()
 
-    N, G = cargar_grafo(GRAPH_FILE)
+    # Si se pasa un grafo específico se usa ese; si no, se usa GRAPH_NAME / GRAFICA_SELECCIONADA
+    target = graph
+    if target is None and "grafo" in kwargs:
+        target = kwargs["grafo"]  # type: ignore[assignment]
+    if target is None and "graph_name" in kwargs:
+        target = kwargs["graph_name"]  # type: ignore[assignment]
+    if target is None:
+        target = GRAPH_NAME
+
+    ruta_archivo, nombre_str = resolver_archivo_grafo(target)
+    N, G = cargar_grafo(ruta_archivo)
     prob_0: NDArray[np.float64] = cargar_probabilidades_iniciales(INICIO_FILE, N)
 
-    return (N, G, prob_0, rng, rng_seed, GRAPH_NAME)
+    return (N, G, prob_0, rng, rng_seed, nombre_str)
+
+
+if __name__ == "__main__":
+    print("=" * 65)
+    print("Catálogo de gráficas disponibles (Datos/):")
+    print("=" * 65)
+    for idx, (gid, fname) in enumerate(EJEMPLOS_GRAFOS.items()):
+        ruta = BASE_DIR / "Datos" / fname
+        marcador = (
+            " <-- [SELECCIONADA]"
+            if gid == GRAFICA_SELECCIONADA or fname == GRAPH_FILE.name
+            else ""
+        )
+        print(f"  [{idx}] ID {gid:2d}: {fname:22s}{marcador}")
+    print("=" * 65)
+
+    n, g, p0, _, seed, nombre = quickstart()
+    print(f"Gráfica cargada:  {nombre} ({GRAPH_FILE.name})")
+    print(f"Nodos (N):        {n}")
+    print(f"Matriz G:         {g.shape} ({int((g > 0).sum())} aristas dirigidas)")
+    print(f"Prob. inicial p0: suma={float(p0.sum()):.4f}, nodos={len(p0)}")
+    print(f"Semilla RNG:      {seed}")
+    print("=" * 65)
