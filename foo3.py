@@ -1,28 +1,31 @@
 import numpy as np
-from itertools import combinations
 from pathlib import Path
-from loaddata import cargar_grafo, cargar_probabilidades_iniciales
 from numpy.typing import NDArray
 
+from loaddata import quickstart
 
-RNG_SEED = 67
-if RNG_SEED is not None:
-    rng = np.random.default_rng(RNG_SEED)
-else:
-    rng = np.random.default_rng()
+"""
+Simulacion de la propogacion del fuego
+"""
 
-BASE_DIR: Path = Path(__file__).resolve().parent
-GRAPH_FILE: Path = (
-    BASE_DIR / "Datos" / "Datos" / "graph_003_probs.txt"
-    if (BASE_DIR / "Datos" / "Datos" / "graph_003_probs.txt").is_file()
-    else BASE_DIR / "Datos" / "Datos" / "graph_010_probs.txt"
-)
-INICIO_FILE: Path = BASE_DIR / "Datos" / "Datos" / "inicio.txt"
-
-
-N, G = cargar_grafo(GRAPH_FILE)
-prob_0: NDArray[np.float64] = cargar_probabilidades_iniciales(INICIO_FILE, N)
+N, G, prob_0, rng, seed, graph_name = quickstart()
 T: int = 2
+
+
+def firecut(m: NDArray[np.float64], cuts: tuple) -> NDArray[np.float64]:
+    """
+    Metodo para establecer los cortafuegos / cortar las aristas a la matriz "m" desde la lista "cuts". Estableciendo un corte en (i,j), entonces tanto m_ij, m_ji son igualados a cero.
+    """
+
+    m_cut = m.copy()
+    for cut in cuts:
+        i = cut[0]
+        j = cut[1]
+
+        m_cut[i, j] = 0
+        m_cut[j, i] = 0
+
+    return m_cut
 
 
 def step(
@@ -45,86 +48,6 @@ def step(
     next_active_boundary: NDArray[np.int64] = new_ignitions
 
     return next_burned, next_active_boundary, delta
-
-
-def ady_transform(m: NDArray[np.float64]) -> NDArray[np.int64]:
-
-    return (m != 0).astype(int)
-
-
-def foofoo(node: int):
-    H = G[node, :]
-
-    return H, H.sum()
-
-
-def foofoo2(node: int):
-
-    H = G @ G[node, :]
-
-    return H, H.sum()
-
-
-def firecut(m: NDArray[np.float64], cuts: tuple) -> NDArray[np.float64]:
-
-    m_cut = m.copy()
-    for cut in cuts:
-        i = cut[0]
-        j = cut[1]
-
-        m_cut[i, j] = 0
-        m_cut[j, i] = 0
-
-    return m_cut
-
-
-def risk_bound(p0=prob_0, g=G) -> float:
-
-    I: NDArray[np.int64] = np.identity(N, dtype=int)
-    g2: NDArray[np.float64] = g @ g
-    np.fill_diagonal(g2, 0.0)
-
-    risk: NDArray[np.float64] = p0 @ (I + g + g2)
-
-    return float(risk.sum())
-
-
-def undirected_edges(g: NDArray[np.float64]) -> list[tuple[int, int]]:
-
-    edges: list[tuple[int, int]] = []
-
-    for u in range(N):
-        for v in range(u + 1, N):
-            if g[u, v] > 0.0 or g[v, u] > 0.0:
-                edges.append((u, v))
-    return edges
-
-
-def prevention_algorithm(p0=prob_0, g=G, top: int = 50, k: int = 4):
-
-    edges = undirected_edges(g)
-
-    results: list = []
-
-    for cuts in combinations(edges, k):
-        g_mod = firecut(g, cuts)
-        val = risk_bound(p0, g_mod)
-        results.append((val, cuts))
-
-    results.sort(key=lambda x: x[0])
-    return results[:top]
-
-
-def firewall(m: NDArray[np.float64], candidate: list, verbose=False):
-
-    score, cuts = candidate
-
-    if verbose:
-        print(f"risk: {score:.4f}")
-        for i, j in cuts:
-            print(f"({i} <-> {j})")
-
-    return firecut(m, cuts)
 
 
 def wildfire(
@@ -170,39 +93,21 @@ def monte_carlo(
     return float(np.mean(total_q)), float(np.median(total_q))
 
 
-def experiment(tries: int, endtime: int, candidate: list):
-    g = firewall(G, candidate)
+def main(tries: int, endtime: int, firewall: tuple, g=G):
 
-    Q, l_0 = wildfire(verbose=True, endtime=endtime, g=g)
+    g_cut = firecut(m=g, cuts=candidate)
+
+    # Simulacion unica
+    Q, l_0 = wildfire(verbose=True, endtime=endtime, g=g_cut)
     print(f"\nNodo inicial: {l_0}")
     print(f"Zonas quemadas: {Q}")
 
-    # Evaluación de Monte Carlo
-    media, mediana = monte_carlo(tries=tries, endtime=endtime, g=g)
+    # Monte Carlo
+    media, mediana = monte_carlo(tries=tries, endtime=endtime, g=g_cut)
     print("-" * 50)
     print(f"Monte Carlo ({tries} corridas) | Media: {media:.4f} | Mediana: {mediana}")
 
 
-def main(tries: int = 1000, endtime: int = T, ncandidates: int = 20):
-
-    candidates = prevention_algorithm(top=ncandidates)
-
-    result: NDArray = np.empty(ncandidates)
-    for i in range(0, len(candidates)):
-        g = firewall(G, candidates[i])
-        mean, median = monte_carlo(tries=tries, endtime=endtime, g=g)
-
-        result[i] = mean
-
-    bestidx: int = int(result.argmin())
-    best: list = [bestidx, result.min()]
-    print(f"{best}\n{candidates[bestidx]}")
-
-
 if __name__ == "__main__":
-    # main(tries=10_000, endtime=2, ncandidates=100)
-
-    candidates = prevention_algorithm(top=100)
-    experiment(tries=10_000, endtime=2, candidate=candidates[84])
-    # print(prevention_algorithm())
-    # print(prevention_algorithm(top=1))
+    candidate = ((3, 15), (6, 16), (6, 17), (16, 17))
+    main(tries=10_000, endtime=2, firewall=candidate)

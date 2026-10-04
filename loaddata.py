@@ -2,12 +2,18 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+
+RNG_SEED = 67
+
+GRAPH_NAME: str = "graph_005_probs"
+
 BASE_DIR: Path = Path(__file__).resolve().parent
 GRAPH_FILE: Path = (
-    BASE_DIR / "Datos" / "Datos" / "graph_006_probs.txt"
-    if (BASE_DIR / "Datos" / "Datos" / "graph_006_probs.txt").is_file()
-    else BASE_DIR / "Datos" / "Datos" / "graph_010_probs.txt"
+    BASE_DIR / "Datos" / GRAPH_NAME
+    if (BASE_DIR / "Datos" / GRAPH_NAME).is_file()
+    else BASE_DIR / "Datos" / "graph_010_probs.txt"
 )
+
 INICIO_FILE: Path = BASE_DIR / "Datos" / "Datos" / "inicio.txt"
 
 
@@ -62,3 +68,16 @@ def cargar_probabilidades_iniciales(ruta_archivo: Path, n: int) -> NDArray[np.fl
     else:
         probs = np.full(n, 1.0 / n, dtype=np.float64)
     return probs
+
+
+def quickstart(rng_seed: "int|None" = RNG_SEED):
+
+    if RNG_SEED is not None:
+        rng = np.random.default_rng(RNG_SEED)
+    else:
+        rng = np.random.default_rng()
+
+    N, G = cargar_grafo(GRAPH_FILE)
+    prob_0: NDArray[np.float64] = cargar_probabilidades_iniciales(INICIO_FILE, N)
+
+    return (N, G, prob_0, rng, rng_seed, GRAPH_NAME)
