@@ -200,9 +200,9 @@ def main(tries: int = 1000, endtime: int = T, ncandidates: int = 20):
 
 
 if __name__ == "__main__":
-    main(tries=10_000, endtime=2, ncandidates=100)
+    # main(tries=10_000, endtime=2, ncandidates=100)
 
     candidates = prevention_algorithm(top=100)
-    experiment(tries=10_000, endtime=2, candidate=candidates[88])
+    experiment(tries=10_000, endtime=2, candidate=candidates[84])
     # print(prevention_algorithm())
     # print(prevention_algorithm(top=1))
