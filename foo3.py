@@ -7,7 +7,8 @@ from numpy.typing import NDArray
 Lo mismo que el archivo foo2.py, pero ahora con los datos oficiales. EN este ejemplo se usa el grafico 6.
 """
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(300)
+dice = np.random.default_rng()
 
 # Código IA
 # --------------------------------------------------
@@ -82,7 +83,9 @@ def cargar_probabilidades_iniciales(ruta_archivo: Path, n: int) -> NDArray[np.fl
 
 # Cargar número de nodos N y matriz G desde los datos del grafo
 N, G = cargar_grafo(GRAPH_FILE)
-T: int = 5
+T: int = 2
+B = (G != 0).astype(int)
+B_unos = B.sum(axis=1)
 
 # Initial node
 prob_0: NDArray[np.float64] = cargar_probabilidades_iniciales(INICIO_FILE, N)
@@ -111,7 +114,7 @@ def step(
     delta: NDArray[np.float64] = gamma * (1 - burned)
 
     # Choose the following nodes to be burned
-    sample: NDArray[np.float64] = rng.random(size=N)
+    sample: NDArray[np.float64] = dice.random(size=N)
     new_ignitions: NDArray[np.int64] = (sample < delta).astype(np.int64)
 
     # Q += I_t
@@ -123,32 +126,63 @@ def step(
     return next_burned, next_active_boundary, delta
 
 
-def main() -> None:
+def main() -> np.int64:
     global Q, I_t
 
     Q[l_0] = 1
     I_t[l_0] = 1
-
-    print(G)
-    print("-" * 50)
+    gamma: NDArray[np.float64] = 1.0 - np.prod((1.0 - G) ** I_t[:, np.newaxis], axis=0)
+    # print(G)
+    # print("-" * 50)
 
     print("t=0")
+    print(f"Nodo Inicial: {l_0}")
     print(f"{Q=}")
     print(f"{I_t=}")
+    print(f"Vector de probabilidad: {gamma * (1 - I_t)}")
 
     t: int = 1
-    while np.any(I_t) or t != T:
+    while np.any(I_t) and t <= T:
         Q, I_t, delta = step(Q, I_t)
         print("-" * 50)
         print(f"t={t}")
         print(f"{Q=}")
         print(f"{I_t=}")
-        print(f"Probabilities vector: {delta}")
+        print(f"Vector de probabilidad: {delta}")
         t += 1
 
     print("-" * 50)
     print(f"End at t={t - 1}.")
 
+    return np.sum(Q)
+
+
+tries: int = 10000
+
+
+def main2():
+    totalQ = np.zeros(tries)
+    for i in range(1, tries):
+        totalQ[i] = main()
+
+    return np.mean(totalQ), np.median(totalQ)
+
 
 if __name__ == "__main__":
     main()
+    # media, mediana = main2()
+    # print(f"media:{media}")
+    # print(G @ G)
+    # print(l_0)
+
+    # print(G[:, l_0])
+
+    # H = (G != 0).astype(int)
+
+    # print(H @ H[:, l_0])
+
+    # print(G[:, l_0])
+    # z = G @ G[:, l_0]
+    # print(z)
+    # B = (z != 0).astype(int)
+    # print(B)

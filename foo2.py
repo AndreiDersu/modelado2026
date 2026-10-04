@@ -8,6 +8,8 @@ Ejemplo simple de la propagación del fuego a través del tiempo en caso de no i
 
 rng = np.random.default_rng(seed=43)
 
+dice = np.random.default_rng()
+
 N: int = 4
 
 # Initial node
@@ -21,13 +23,25 @@ kappa = np.zeros((N, N))
 kappa[2][3] = G[2][3]
 kappa[3][2] = G[3][2]
 
-G = G - kappa
+G[2][3] = 0
+G[3][2] = 0
+
+G[1][0] = 0
+G[0][1] = 0
+
+A = G - kappa
+
 
 # Q: Total burned nodes vector
 Q: NDArray[np.int64] = np.zeros(N, dtype=np.int64)
 
 # I_t: Burned boundary
 I_t: NDArray[np.int64] = np.zeros(N, dtype=np.int64)
+
+B = (G != 0).astype(int)
+
+# G[2][0] = 0
+# G[0][2] = 0
 
 
 def step(
@@ -46,7 +60,7 @@ def step(
     delta: NDArray[np.float64] = gamma * (1 - burned)
 
     # Choose the following nodes to be burned
-    sample: NDArray[np.float64] = rng.random(size=N)
+    sample: NDArray[np.float64] = dice.random(size=N)
     new_ignitions: NDArray[np.int64] = (sample < delta).astype(np.int64)
 
     # Q += I_t
@@ -65,7 +79,7 @@ def main() -> None:
     I_t[l_0] = 1
 
     print(G)
-    print("-" * 50)
+    print("-" * 501)
 
     print("t=0")
     print(f"{Q=}")
@@ -73,7 +87,6 @@ def main() -> None:
 
     t: int = 1
     while np.any(I_t):
-        sleep(2.5)
         Q, I_t, delta = step(Q, I_t)
         print("-" * 50)
         print(f"t={t}")
@@ -83,10 +96,11 @@ def main() -> None:
 
         t += 1
 
-    sleep(2.5)
     print("-" * 50)
     print(f"End at t={t - 1}.")
 
 
 if __name__ == "__main__":
     main()
+    # print(G)
+    # print(B @ B)
