@@ -5,7 +5,12 @@ from numpy.typing import NDArray
 from loaddata import quickstart
 
 """
-Simulacion de la propogacion del fuego
+Preparativos: Simulacion de la propogacion del fuego
+
+En este modulo se encuentra el simulador de propagacion de fuego que se va a usar para el resto de problemas. 
+
+A partir del simulador  de propagacion de fuego, esta el metodo de monte carlo para calcular el promedio de zonas incendiadas tras correr la simulacion un numero alto de veces.
+
 """
 
 N, G, prob_0, rng, seed, graph_name = quickstart()
@@ -99,7 +104,7 @@ def wildfire(
 
 
 def monte_carlo(
-    tries: int = 10000, endtime: int = T, g: NDArray[np.float64] = G
+    tries: int = 10_000, endtime: int = T, g: NDArray[np.float64] = G
 ) -> tuple[float, float]:
     """
     Corre la simuilacion de incendio forestal un gran numero de veces para determinar el promedio de zonas incendiadas.
@@ -111,9 +116,15 @@ def monte_carlo(
     return float(np.mean(total_q)), float(np.median(total_q))
 
 
-def experiment(tries: int, endtime: int, firewall: tuple, g=G):
+def experiment(tries: int, endtime: int, firewall: "tuple|None", g=G):
+    """
+    Corre una simulación individual y el método de monte carlo para sacar un promedio. Esta función se usa para simulaciones individuales.
+    """
 
-    g_cut = firecut(m=g, cuts=candidate)
+    if firewall is not None:
+        g_cut = firecut(m=g, cuts=candidate)
+    else:
+        g_cut = g
 
     # Simulacion unica
     Q, l_0 = wildfire(verbose=True, endtime=endtime, g=g_cut)
@@ -127,5 +138,6 @@ def experiment(tries: int, endtime: int, firewall: tuple, g=G):
 
 
 if __name__ == "__main__":
+    # Ejemplo, grafo 3 usando el cortafuegos a continuacion:
     candidate = ((3, 15), (6, 16), (6, 17), (16, 17))
-    experiment(tries=10_000, endtime=2, firewall=candidate)
+    experiment(tries=10_000, endtime=20, firewall=None)

@@ -1,8 +1,12 @@
-from __future__ import annotations
-
 from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
+
+"""
+
+Carga las graficas, la semilla (para los sucesos aleatorios) y las condiciones iniciales.
+
+"""
 
 # ==============================================================================
 # CONFIGURACIÓN GENERAL
@@ -37,7 +41,7 @@ LISTA_GRAFOS: list[str] = [
 #   - Por índice:     0, 1, 2, 3, 4, 5  (0->003, 1->004, 2->005, 3->007, etc.)
 #   - Por nombre:     "graph_005_probs", "graph_005_probs.txt", "005", etc.
 # ==============================================================================
-GRAFICA_SELECCIONADA: int | str = 5  # <-- ¡CAMBIA ESTE VALOR PARA CAMBIAR DE GRAFO!
+GRAFICA_SELECCIONADA: int | str = 5
 
 
 BASE_DIR: Path = Path(__file__).resolve().parent
@@ -152,6 +156,9 @@ def cargar_grafo(ruta_archivo: Path) -> tuple[int, NDArray[np.float64]]:
     return n, matriz_g
 
 
+pass
+
+
 def cargar_probabilidades_iniciales(ruta_archivo: Path, n: int) -> NDArray[np.float64]:
     if not ruta_archivo.is_file():
         return np.full(n, 1.0 / n, dtype=np.float64)
@@ -206,23 +213,4 @@ def quickstart(
 
 
 if __name__ == "__main__":
-    print("=" * 65)
-    print("Catálogo de gráficas disponibles (Datos/):")
-    print("=" * 65)
-    for idx, (gid, fname) in enumerate(EJEMPLOS_GRAFOS.items()):
-        ruta = BASE_DIR / "Datos" / fname
-        marcador = (
-            " <-- [SELECCIONADA]"
-            if gid == GRAFICA_SELECCIONADA or fname == GRAPH_FILE.name
-            else ""
-        )
-        print(f"  [{idx}] ID {gid:2d}: {fname:22s}{marcador}")
-    print("=" * 65)
-
-    n, g, p0, _, seed, nombre = quickstart()
-    print(f"Gráfica cargada:  {nombre} ({GRAPH_FILE.name})")
-    print(f"Nodos (N):        {n}")
-    print(f"Matriz G:         {g.shape} ({int((g > 0).sum())} aristas dirigidas)")
-    print(f"Prob. inicial p0: suma={float(p0.sum()):.4f}, nodos={len(p0)}")
-    print(f"Semilla RNG:      {seed}")
-    print("=" * 65)
+    pass
