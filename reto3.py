@@ -48,7 +48,18 @@ def select_best_edge_dynamic(
     Q_t: NDArray[np.int64],
     G_mat: NDArray[np.float64],
 ) -> tuple[int, int] | None:
-    """Selecciona la mejor arista (k=1) minimizando la cota de riesgo superior."""
+    """Selecciona la mejor arista (k=1) minimizando la cota de riesgo superior.
+
+    Es similar al firewall_algorithm(), tambien del reto 1, solo que calcula las fronteras de manera dinamica,
+    y en el primer filtro usa la cota de riesgo superior dinamica en vez de la estatica y no usa la combinatoria.
+
+    Se decido cambiar de algoritmo (inicialmente primero se usaba combinatoria y luego monte carlo). Las razones son similares a las dificultades presentadas
+    para el reto 1 con s mayor a 2.
+
+    El metodo de monte carlo original fue cambiado por Greedy Argmin, el cual es mucho menos costo computacionalmente, por lo que es mas apto si
+    consideramos que en una estrategia dinamica la velocidad de reaccion debe de ser prioritaria.
+
+    """
 
     # Selecciona las posibles aristas donde poner cortafuegos
     candidates = get_frontier_edges(I_t, Q_t, G_mat)
@@ -64,11 +75,8 @@ def select_best_edge_dynamic(
     min_risk = float("inf")
 
     for edge in candidates:
-        g_cand = firecut(G_mat, (edge,))
-        g2 = g_cand @ g_cand
-        np.fill_diagonal(g2, 0.0)
-
-        total_risk = dynamic_risk_bound(I_t, Q_t, g_cand)
+        g = firecut(G_mat, (edge,))
+        total_risk = dynamic_risk_bound(I_t, Q_t, g)
 
         # Greedy Argmin
 
