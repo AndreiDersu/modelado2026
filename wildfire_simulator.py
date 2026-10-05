@@ -1,8 +1,9 @@
 import numpy as np
-from pathlib import Path
 from numpy.typing import NDArray
 
 from loaddata import quickstart
+from wildfire_core import firecut, step
+from heuristics import select_best_edge_dynamic
 
 """
 Preparativos: Simulacion de la propogacion del fuego
@@ -13,56 +14,16 @@ A partir del simulador  de propagacion de fuego, esta el metodo de monte carlo p
 
 """
 
-N, G, prob_0, rng, seed, graph_name = quickstart()
-T: int = 2
-
-
-def firecut(m: NDArray[np.float64], cuts: tuple) -> NDArray[np.float64]:
-    """
-    Metodo para establecer los cortafuegos / cortar las aristas a la matriz "m" desde la lista "cuts". Estableciendo un corte en (i,j), entonces: m_ij, m_ji son igualados a cero.
-    """
-
-    m_cut = m.copy()
-    for cut in cuts:
-        i = cut[0]
-        j = cut[1]
-
-        m_cut[i, j] = 0
-        m_cut[j, i] = 0
-
-    return m_cut
-
-
-def step(
-    burned: NDArray[np.int64],
-    active_boundary: NDArray[np.int64],
-    G_mat: NDArray[np.float64],
-    generator: np.random.Generator,
-) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
-    """
-    Define el avance para cada paso de la simulación. Calcula la probabilidad de ignición a partir de I_t
-
-    """
-
-    # Probabilidad de ignición por los vecinos activos en este paso
-    gamma: NDArray[np.float64] = 1.0 - np.prod(
-        (1.0 - G_mat) ** active_boundary[:, np.newaxis], axis=0
-    )
-    delta: NDArray[np.float64] = gamma * (1 - burned)
-
-    sample: NDArray[np.float64] = generator.random(size=burned.shape[0])
-    new_ignitions: NDArray[np.int64] = (sample < delta).astype(np.int64)
-
-    next_burned: NDArray[np.int64] = burned + new_ignitions
-    next_active_boundary: NDArray[np.int64] = new_ignitions
-
-    return next_burned, next_active_boundary, delta
-
 
 def wildfire(
+    g: NDArray[np.float64],
+    endtime: "int | None" = 2,
+    generator: "np.random.Generator | None" = None,
     verbose: bool = False,
-    endtime: int = T,
-    g: NDArray[np.float64] = G,
+    initial_node: "int | None" = None,
+    with_firefighters: bool = False,
+    max_steps: int = 100,
+    p0: "NDArray[np.float64] | None" = None,
 ) -> tuple[int, int]:
     """
     Simula el incendio forestal usando las condiciones planteadas en el planteamiento general. Por cada intesación del tiempo t, calcula el vector de zonas quemadas Q_t, el vector de nodos con la capacidad de pasar el fuego I_t y el vector de probabilidad que se usó para I_t.
@@ -71,13 +32,30 @@ def wildfire(
 
     Si verbose esta activado, entonces muestra en la terminal los parametros de la simulacion para cada tiempo t, util para hacer pruebas individuales.
 
+    Posteriormente, en el desarrollo del reto 3, se generalizo la funcion para poder ser utilizada tambien ahi. Se le añadieron las vairables de max_steps, with_firefighters y la posiblilidad de escoger a dedo el nodo inicial
     """
 
-    # Establece las condiciones iniciales de Q_0 e I_0
-    Q: NDArray[np.int64] = np.zeros(N, dtype=np.int64)
-    I_t: NDArray[np.int64] = np.zeros(N, dtype=np.int64)
+    if generator is None:
+        generator = np.random.default_rng()
 
-    l_0: int = int(rng.choice(N, p=prob_0))
+    # Establece las condiciones iniciales de Q_0 e I_0
+
+    n = g.shape[0]
+    g_work = g.copy()
+
+    Q: NDArray[np.int64] = np.zeros(n, dtype=np.int64)
+    I_t: NDArray[np.int64] = np.zeros(n, dtype=np.int64)
+
+    # Establece la simulacion para el nodo inicial
+    if initial_node is None:
+        if p0 is not None:
+            prob_0 = p0
+        else:
+            _, _, prob_0, _, _, _ = quickstart()
+        l_0 = int(generator.choice(n, p=prob_0))
+    else:
+        l_0 = initial_node
+
     Q[l_0] = 1
     I_t[l_0] = 1
 
@@ -88,9 +66,24 @@ def wildfire(
         print(f"I_0 = {I_t}")
 
     # Hasta que el tiempo alcance el limite o I_0 = 0, calcula la siguiente franja de nodos quemados:
+
     t: int = 1
-    while np.any(I_t) and t <= endtime:
-        Q, I_t, prob = step(Q, I_t, g, rng)
+    while np.any(I_t):
+        if endtime is not None and t > endtime:
+            break
+
+        if t > max_steps:
+            break
+
+        # Intervención activa de los bomberos (Reto 3 y 4)
+        if with_firefighters:
+            edge_to_cut = select_best_edge_dynamic(I_t, Q, g_work)
+            if edge_to_cut is not None:
+                g_work = firecut(g_work, (edge_to_cut,))
+
+        # Se propaga sobre la matriz modificada con los cortes
+        Q, I_t, prob = step(Q, I_t, g_work, generator)
+
         if verbose:
             print("-" * 50)
             print(f"t={t}")
@@ -104,40 +97,64 @@ def wildfire(
 
 
 def monte_carlo(
-    tries: int = 10_000, endtime: int = T, g: NDArray[np.float64] = G
-) -> tuple[float, float]:
+    g: NDArray[np.float64],
+    tries: int = 10_000,
+    endtime: "int | None" = 2,
+    initial_node: "int | None" = None,
+    with_firefighters: bool = False,
+    generator: "np.random.Generator | None" = None,
+    p0: "NDArray[np.float64] | None" = None,
+) -> float:
     """
     Corre la simuilacion de incendio forestal un gran numero de veces para determinar el promedio de zonas incendiadas.
     """
+    if generator is None:
+        generator = np.random.default_rng()
+
+    if initial_node is None and p0 is None:
+        _, _, p0, _, _, _ = quickstart()
 
     total_q = np.empty(tries, dtype=np.int64)
+
     for i in range(tries):
-        total_q[i] = wildfire(verbose=False, endtime=endtime, g=g)[0]
-    return float(np.mean(total_q)), float(np.median(total_q))
+        q_val, _ = wildfire(
+            g=g,
+            initial_node=initial_node,
+            endtime=endtime,
+            with_firefighters=with_firefighters,
+            generator=generator,
+            p0=p0,
+        )
+        total_q[i] = q_val
+
+    return float(np.mean(total_q))
 
 
-def experiment(tries: int, endtime: int, firewall: "tuple|None", g=G):
+def experiment(g, tries: int, endtime: int, firewall: "tuple|None", generator):
     """
-    Corre una simulación individual y el método de monte carlo para sacar un promedio. Esta función se usa para simulaciones individuales.
+    Corre una simulación individual y el método de monte carlo para sacar un promedio. Esta función se usa para simulaciones individuales realizadas en mientras se planteaba la resolucion del reto 1.
     """
 
     if firewall is not None:
-        g_cut = firecut(m=g, cuts=candidate)
+        g_cut = firecut(m=g, cuts=firewall)
     else:
         g_cut = g
 
     # Simulacion unica
-    Q, l_0 = wildfire(verbose=True, endtime=endtime, g=g_cut)
+    Q, l_0 = wildfire(g=g_cut, endtime=endtime, generator=generator, verbose=True)
     print(f"\nNodo inicial: {l_0}")
     print(f"Zonas quemadas: {Q}")
 
     # Monte Carlo
-    media, mediana = monte_carlo(tries=tries, endtime=endtime, g=g_cut)
+    media = monte_carlo(tries=tries, endtime=endtime, g=g_cut, generator=generator)
     print("-" * 50)
-    print(f"Monte Carlo ({tries} corridas) | Media: {media:.4f} | Mediana: {mediana}")
+    print(f"Monte Carlo ({tries} corridas) | Media: {media:.4f}")
 
 
 if __name__ == "__main__":
     # Ejemplo, grafo 3 usando el cortafuegos a continuacion:
+
+    _, G, _, rng, _, _ = quickstart()
+
     candidate = ((3, 15), (6, 16), (6, 17), (16, 17))
-    experiment(tries=10_000, endtime=20, firewall=None)
+    experiment(tries=10_000, endtime=20, firewall=candidate, g=G, generator=rng)
