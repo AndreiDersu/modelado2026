@@ -100,7 +100,7 @@ def select_best_edge_dynamic(
     Se decido cambiar de algoritmo (inicialmente primero se usaba combinatoria y luego monte carlo). Las razones son similares a las dificultades presentadas
     para el reto 1 con s mayor a 2.
 
-    El metodo de monte carlo original fue cambiado por Greedy Argmin, el cual es mucho menos costo computacionalmente, por lo que es mas apto si
+    El metodo de monte carlo original fue cambiado por Greedy Argmin, el cual es mucho menos costoso computacionalmente, por lo que es mas apto si
     consideramos que en una estrategia dinamica la velocidad de reaccion debe de ser prioritaria.
 
     """

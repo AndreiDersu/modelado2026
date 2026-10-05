@@ -3,7 +3,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from loaddata import quickstart
-from wildfire_simulator import firecut
+from wildfire_core import firecut, get_frontier_edges
+from heuristics import dynamic_risk_bound
 
 """
 Reto 2: Contención Dinámica
@@ -20,9 +21,7 @@ K_FIREWALLS: int = 2  # Número de cortafuegos disponibles por paso temporal
 def load_graph(
     path_or_id: Path | int | str = GRAPH_SELECTION,
 ) -> tuple[int, NDArray[np.int64]]:
-    """
-    Carga la matriz de adyacencia de G.
-    """
+    """Carga la matriz de adyacencia de G binarizada desde loaddata."""
     N, G, _, _, _, _ = quickstart(graph=path_or_id)
     adj_matrix: NDArray[np.int64] = (G > 0).astype(np.int64)
     return N, adj_matrix
@@ -36,29 +35,60 @@ def select_firewalls_by_neighbor_degrees(
 ) -> list[tuple[int, int]]:
     """Selecciona hasta k aristas (u, v) con u en I_t y v susceptible.
 
-    Criterio heurístico:
-        Maximiza el grado libre de v: d_sano(v) = sum_w A[v, w] * (1 - Q[w]).
-        Aísla prioritariamente aquellos nodos que poseen mayor cantidad de
-        conexiones sanas hacia el resto de la red.
+    Reutiliza get_frontier_edges de wildfire_core para aislar la frontera.
+    Maximiza el grado libre de v: d_sano(v) = sum_w A[v, w] * (1 - Q[w]).
     """
-    active_nodes = np.flatnonzero(I_t)
-    healthy_nodes = 1 - Q
+    candidates = get_frontier_edges(I_t, Q, A.astype(np.float64))
+    if not candidates:
+        return []
 
-    # Grado no quemado de cada nodo en el grafo: vector d = A @ (1 - Q)
-    healthy_degrees = A @ healthy_nodes
+    # Vector d_sano = A @ (1 - Q)
+    healthy_degrees = A @ (1 - Q)
 
-    candidate_edges: list[tuple[int, int, int]] = []
+    scored_edges: list[tuple[int, int, int]] = []
+    for u, v in candidates:
+        # El nodo susceptible v es el que no pertenece a Q
+        target = v if Q[v] == 0 else u
+        origin = u if target == v else v
+        scored_edges.append((origin, target, int(healthy_degrees[target])))
 
-    for u in active_nodes:
-        # Vecinos sanos de u: conectados en A y aún no quemados
-        healthy_neighbors = np.flatnonzero((A[u, :] > 0) & (healthy_nodes > 0))
-        for v in healthy_neighbors:
-            candidate_edges.append((int(u), int(v), int(healthy_degrees[v])))
+    # Orden descendente según conexiones sanas del nodo objetivo
+    scored_edges.sort(key=lambda item: item[2], reverse=True)
+    return [(u, v) for u, v, _ in scored_edges[:k]]
 
-    # Ordenamiento descendente según salidas sanas de v
-    candidate_edges.sort(key=lambda item: item[2], reverse=True)
 
-    return [(u, v) for u, v, _ in candidate_edges[:k]]
+def select_firewalls_by_risk_bound(
+    A: NDArray[np.int64],
+    Q: NDArray[np.int64],
+    I_t: NDArray[np.int64],
+    k: int = 2,
+) -> list[tuple[int, int]]:
+    """Alternativa: selecciona k cortafuegos de forma secuencial voraz (Greedy k-step)
+
+    reutilizando dynamic_risk_bound de heuristics.py sobre la matriz de adyacencia.
+    """
+    chosen_cuts: list[tuple[int, int]] = []
+    A_eval = A.astype(np.float64)
+
+    for _ in range(k):
+        candidates = get_frontier_edges(I_t, Q, A_eval)
+        if not candidates:
+            break
+
+        best_edge = candidates[0]
+        min_risk = float("inf")
+
+        for edge in candidates:
+            A_cand = firecut(A_eval, (edge,))
+            risk = dynamic_risk_bound(I_t, Q, A_cand)
+            if risk < min_risk:
+                min_risk = risk
+                best_edge = edge
+
+        chosen_cuts.append(best_edge)
+        A_eval = firecut(A_eval, (best_edge,))
+
+    return chosen_cuts
 
 
 def propagation_step(
@@ -82,6 +112,7 @@ def simulate_challenge2(
     k: int = K_FIREWALLS,
     max_steps: int = 50,
     verbose: bool = True,
+    use_risk_heuristic: bool = False,
 ) -> tuple[int, int, NDArray[np.int64]]:
     """Ejecuta la propagación del fuego con colocación dinámica de cortafuegos.
 
@@ -91,6 +122,7 @@ def simulate_challenge2(
         k: Cortafuegos a colocar por paso.
         max_steps: Límite superior de pasos temporales.
         verbose: Si es True, imprime la traza de la simulación paso a paso.
+        use_risk_heuristic: Alterna entre heurística de grados y dynamic_risk_bound.
 
     Returns:
         (total_quemados, tiempo_total, vector_quemados_final)
@@ -120,12 +152,15 @@ def simulate_challenge2(
         if verbose:
             print(f"\n==================== PASO DE TIEMPO t = {t} ====================")
 
-        firewalls = select_firewalls_by_neighbor_degrees(A_work, Q, I_t, k=k)
+        if use_risk_heuristic:
+            firewalls = select_firewalls_by_risk_bound(A_work, Q, I_t, k=k)
+        else:
+            firewalls = select_firewalls_by_neighbor_degrees(A_work, Q, I_t, k=k)
 
         if firewalls:
             if verbose:
                 print(f"Cortafuegos colocados en t={t}: {firewalls}")
-            A_work = firecut(A_work, firewalls)
+            A_work = firecut(A_work.astype(np.float64), firewalls).astype(np.int64)
         else:
             if verbose:
                 print("No hay aristas expuestas disponibles para cortar.")
@@ -152,8 +187,23 @@ def simulate_challenge2(
 
 
 def main() -> None:
-    N, A = load_graph(GRAPH_SELECTION)
-    simulate_challenge2(A, initial_node=INITIAL_NODE, k=K_FIREWALLS, verbose=True)
+    from loaddata import EJEMPLOS_GRAFOS
+
+    print("Reto 2: conexion dinamica aproximada")
+
+    for gid in EJEMPLOS_GRAFOS:
+        N, A = load_graph(gid)
+        quemados, tiempo, _ = simulate_challenge2(
+            A,
+            initial_node=INITIAL_NODE,
+            k=K_FIREWALLS,
+            verbose=False,
+            use_risk_heuristic=True,
+        )
+        salvados = N - quemados
+        print(
+            f"Grafo {gid:03d} | Quemados: {quemados:2d} | Salvados: {salvados:2d} | Pasos: {tiempo}"
+        )
 
 
 if __name__ == "__main__":

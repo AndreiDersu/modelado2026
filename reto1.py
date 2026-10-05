@@ -41,11 +41,12 @@ def firewall_algorithm(
     result: NDArray = np.empty(len(candidates))
     for i in range(0, len(candidates)):
         g_cut = set_firewall(g, candidates[i])
+        rng = np.random.default_rng(67)
         mean = monte_carlo(
             tries=tries,
             endtime=endtime,
             g=g_cut,
-            generator=generator,
+            generator=rng,
             p0=p0,
         )
 
