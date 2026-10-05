@@ -21,34 +21,56 @@ def get_frontier_edges(
     return list(candidates)
 
 
+def dynamic_risk_bound(
+    I_t: NDArray[np.int64],
+    Q_t: NDArray[np.int64],
+    g_cand: NDArray[np.float64],
+) -> float:
+    """
+    Establece la cota de riesgo superior, de manera similar que risk_bound() original en prevention.py
+
+    Ahora, el vector de riesgo es: I_t(G'+G'^2), osea que se cambia p0 por I_t y se elimina el caso de t=0.
+
+    Sin embargo, para impedir el daño por retropropagacion, se mutiplica por un factor (1-Q_t) antes de hacer la suma
+    de las componentes.
+    """
+
+    g2 = g_cand @ g_cand
+    np.fill_diagonal(g2, 0.0)
+
+    risk: NDArray[np.float64] = I_t.astype(np.float64) @ (g_cand + g2)
+
+    return float(np.sum(risk * (1 - Q_t)))
+
+
 def select_best_edge_dynamic(
     I_t: NDArray[np.int64],
     Q_t: NDArray[np.int64],
     G_mat: NDArray[np.float64],
 ) -> tuple[int, int] | None:
-    """Selecciona la mejor arista (k=1) minimizando el riesgo cuadrático
+    """Selecciona la mejor arista (k=1) minimizando la cota de riesgo superior."""
 
-    local emitido por el frente activo.
-    """
+    # Selecciona las posibles aristas donde poner cortafuegos
     candidates = get_frontier_edges(I_t, Q_t, G_mat)
+
+    # Checa que poner cortafuegos sea opcion
     if not candidates:
         return None
 
+    # Se selecciona el primero de la lista como prueba
     best_edge = candidates[0]
-    min_risk = float("inf")
 
-    # Vector fila del frente activo I_t
-    i_vec = I_t.astype(np.float64)
+    # Para el Greedy Argmin. Solo es para el caso inicial
+    min_risk = float("inf")
 
     for edge in candidates:
         g_cand = firecut(G_mat, (edge,))
         g2 = g_cand @ g_cand
         np.fill_diagonal(g2, 0.0)
 
-        # Flujo de riesgo emitido a 1 y 2 pasos hacia nodos susceptibles
-        projected_risk = i_vec @ (g_cand + g2)
-        # Ponderar solo hacia nodos no quemados
-        total_risk = float(np.sum(projected_risk * (1 - Q_t)))
+        total_risk = dynamic_risk_bound(I_t, Q_t, g_cand)
+
+        # Greedy Argmin
 
         if total_risk < min_risk:
             min_risk = total_risk
@@ -64,7 +86,7 @@ def dinamic_wildfire(
     with_firefighters: bool = True,
     endtime: int = 100,
 ) -> int:
-    """Funciona de manera similar a la funcion wildfire_simulator.wildfire(), pero cambian las condiciones iniciales e incorpora la colocacion dinamica de cortafuegos."""
+    """Funciona de manera similar a la funcion wildfire() de wildfire_simulator.py, pero cambian las condiciones iniciales e incorpora la colocacion dinamica de cortafuegos."""
     n = G_init.shape[0]
     G_work = G_init.copy()
 
@@ -90,18 +112,20 @@ def dinamic_wildfire(
     return int(np.sum(Q))
 
 
+def monte_carlo(): ...
+
+
 def experiment3(tries: int = 10_000, initial_node: int = 1) -> None:
     """
     Corre una simulación para los 6 grafos, usa el metodo de montacarlo para calcular las zonas salvas medias.
     """
 
     print(f"Reto 3 q={initial_node}, k=1, {tries} simulaciones de monte carlo")
-    print(f"{'Grafo'}, {'Sin bomberos'}, {'Con Bomberos'}, {'Salvadas (Media)'}")
 
     for gid in EJEMPLOS_GRAFOS:
         N, G, _, _, seed, graph_name = quickstart(graph=gid)
 
-        # 1. Simulación sin bomberos
+        # Se calcula las zonas quemadas promedio sin cortafuegos dinamicos G
         rng_base = np.random.default_rng(seed)
         q_base = np.array(
             [
@@ -119,10 +143,12 @@ def experiment3(tries: int = 10_000, initial_node: int = 1) -> None:
                 for _ in range(tries)
             ]
         )
-        mean_strat = float(np.mean(q_strat))
+        mean_start = float(np.mean(q_strat))
 
-        zonas_salvadas = mean_base - mean_strat
-        print(f"{graph_name}, {mean_base}, {mean_strat}, {zonas_salvadas}")
+        zonas_salvadas = mean_base - mean_start
+        print(
+            f"Grafo: {graph_name}, Sin bomberos: {mean_base}, Con bomberos: {mean_strat}, Salvadas (Media): {zonas_salvadas}"
+        )
 
 
 if __name__ == "__main__":
