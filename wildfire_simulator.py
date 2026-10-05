@@ -6,11 +6,15 @@ from wildfire_core import firecut, step
 from heuristics import select_best_edge_dynamic
 
 """
-Preparativos: Simulacion de la propogacion del fuego
+Simulacion de la propogacion del fuego
 
 En este modulo se encuentra el simulador de propagacion de fuego que se va a usar para el resto de problemas. 
 
 A partir del simulador  de propagacion de fuego, esta el metodo de monte carlo para calcular el promedio de zonas incendiadas tras correr la simulacion un numero alto de veces.
+
+El algoritmo es el mismo para el reto 1, 3, 4 y 5
+
+Algunos elementos de la logica de la simulacion estan el el modulo de "wildfire_core.py".
 
 """
 
@@ -132,7 +136,7 @@ def monte_carlo(
 
 def experiment(g, tries: int, endtime: int, firewall: "tuple|None", generator):
     """
-    Corre una simulación individual y el método de monte carlo para sacar un promedio. Esta función se usa para simulaciones individuales realizadas en mientras se planteaba la resolucion del reto 1.
+    Corre una simulación individual y el método de monte carlo para sacar un promedio. Esta funcion se usa para simulaciones individuales realizadas mientras se planteaba la resolucion del reto 1.
     """
 
     if firewall is not None:
@@ -154,7 +158,7 @@ def experiment(g, tries: int, endtime: int, firewall: "tuple|None", generator):
 if __name__ == "__main__":
     # Ejemplo, grafo 3 usando el cortafuegos a continuacion:
 
-    _, G, _, rng, _, _ = quickstart()
+    _, G, _, rng, _, _ = quickstart(graph=3)
 
-    candidate = ((3, 15), (6, 16), (6, 17), (16, 17))
-    experiment(tries=10_000, endtime=20, firewall=candidate, g=G, generator=rng)
+    candidate = ((6, 13), (10, 16), (11, 19), (13, 16))
+    experiment(tries=10_000, endtime=2, firewall=candidate, g=G, generator=rng)

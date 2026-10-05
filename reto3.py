@@ -1,7 +1,16 @@
 import numpy as np
-from numpy.typing import NDArray
 from loaddata import EJEMPLOS_GRAFOS, quickstart
 from wildfire_simulator import monte_carlo
+
+
+"""
+Reto 3  Para donde sopla el viento
+
+La solcuion dinamica del reto, usa los algoritmos de "dynamic_risk_bound()" y "select_best_edge_dynamic()" para el calculo de los mejores coretes 
+en cada paso del tiempo. Al finalizar se usa el metodo de montecarlo apra estimar el promedio de zonas quemadas sin  y con cortafuegos, y con ello 
+se estima las zonas salvadas en promedio
+
+"""
 
 
 def experiment3(tries: int = 10_000, initial_node: int = 1) -> None:
@@ -14,7 +23,7 @@ def experiment3(tries: int = 10_000, initial_node: int = 1) -> None:
     for gid in EJEMPLOS_GRAFOS:
         N, G, _, _, seed, graph_name = quickstart(graph=gid)
 
-        # Primero se calcula las zonas quemadas promedio sin cortafuegos dinamicos, ie matriz G (hasta extinción)
+        # Primero se calcula las zonas quemadas promedio sin cortafuegos dinamicos, ie matriz G (hasta extincion)
         rng_base = np.random.default_rng(seed)
         mean_base = monte_carlo(
             g=G,
@@ -25,7 +34,7 @@ def experiment3(tries: int = 10_000, initial_node: int = 1) -> None:
             with_firefighters=False,
         )
 
-        # Simulación con cortafuegos dinamicos, ie matriz G'_t (hasta extinción)
+        # Simulacion con cortafuegos dinamicos, ie matriz G'_t (hasta extincion)
         rng = np.random.default_rng(seed)
         mean = monte_carlo(
             g=G,

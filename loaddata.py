@@ -210,7 +210,3 @@ def quickstart(
     prob_0: NDArray[np.float64] = cargar_probabilidades_iniciales(INICIO_FILE, N)
 
     return (N, G, prob_0, rng, rng_seed, nombre_str)
-
-
-if __name__ == "__main__":
-    pass

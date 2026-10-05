@@ -7,7 +7,7 @@ from wildfire_core import firecut, get_frontier_edges
 from heuristics import dynamic_risk_bound
 
 """
-Reto 2: Contención Dinámica
+Reto 2: Contencion Dinamica
 
 Modela la propagación del fuego como un frente de onda determinista sobre un
 grafo, en este caso equivalente a uno no dirigido. Se colocan los cortafuegos en tiempo real para mitigar el avance del incendio.

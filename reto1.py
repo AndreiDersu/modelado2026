@@ -7,15 +7,11 @@ from heuristics import first_filter, set_firewall
 from wildfire_simulator import monte_carlo
 
 """
-Reto 1: Políticas de prevención
+Reto 1: Politicas de prevención
 
-Calcula para cada grafo el daño medio sin intervención (línea base con G intacto en s=2 etapas), las aristas optimas cortadas (k=4) y daño medio resultante con cortafuegos.
+Calcula para cada grafo las zonas quemadas medias sin intervencion (linea base con G intacto en s=2 etapas), las aristas optimas cortadas (k=4) y las zonas medias quemadas al conciderar el cortafuegos.
 
 Tambien calcula el numero esperado de zonas salvadas.
-
-El codigo de la simulacion del incendio forestal se encuentra en wildfire_sumulator.py
-El codigo del algoritmo de prevencion se encuentra en prevention.py
-El codigo para cargar las graficas y datos iniciales se encuentra en loaddata.py
 
 """
 

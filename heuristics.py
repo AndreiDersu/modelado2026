@@ -4,6 +4,12 @@ from numpy.typing import NDArray
 
 from wildfire_core import firecut, undirected_edges, get_frontier_edges
 
+"""
+Este modulo se encunentra la logica heuristica usada para las simulaciones, como el calculo de la cota de riesgo superior (tanto la dinamica como la estatica),
+los primeros filtros, los algoritmos de seleccion de aristas de manera dinamica, etc.
+
+"""
+
 
 def risk_bound(n: int, p0, g) -> float:
     """
@@ -14,6 +20,8 @@ def risk_bound(n: int, p0, g) -> float:
     la cual es una aproximacion lineal de segundo orden del riesgo real de incendio para una matriz de probabilidad G' con cortafuegos establecidos. Esta formula no involucra calculos complejos y es vectorizable, lo que la combierte en una eleccion ventajosa como cota superior.
 
     El objetivo es minimizar R_2 cambiando la matriz la distribucion de cortafuegos de G'.
+
+    Es la base de la solucion del reto 1.
     """
 
     I: NDArray[np.int64] = np.identity(n, dtype=int)
@@ -35,6 +43,8 @@ def first_filter(
 
     De esta manera, tras ordenar las elecciones de cortafuegos de menor a mayor cota de riesgo superior, se devuelve un top (50 por ejemplo) de candidatos con menor cota de riesgo.
 
+    Forma parte de los algoritmos del reto 1.
+
     """
 
     edges = undirected_edges(n, g)
@@ -52,7 +62,8 @@ def first_filter(
 
 def set_firewall(m: NDArray[np.float64], candidate: list, verbose=False):
     """
-    Este metodo selecciona un candidato de la lista de candidatos potenciales y realiza los cortes en la matriz G para obtener la respectiva matriz G'
+    Este metodo selecciona un candidato de la lista de candidatos potenciales y realiza los cortes en la matriz G para obtener la respectiva matriz G'.
+    Es usado para el 1.
     """
 
     score, cuts = candidate
@@ -76,7 +87,9 @@ def dynamic_risk_bound(
     Ahora, el vector de riesgo es: I_t(G'+G'^2), osea que se cambia p0 por I_t y se elimina el caso de t=0.
 
     Sin embargo, para impedir el daño por retropropagacion, se mutiplica por un factor (1-Q_t) antes de hacer la suma
-    de las componentes.
+    de las componentes, y asi evitar los nodos quemados, esto igual se usa para el simulador sin bomberos.
+
+    Es usado para el reto 3 y 4
     """
 
     g2 = g_cand @ g_cand
@@ -103,6 +116,7 @@ def select_best_edge_dynamic(
     El metodo de monte carlo original fue cambiado por Greedy Argmin, el cual es mucho menos costoso computacionalmente, por lo que es mas apto si
     consideramos que en una estrategia dinamica la velocidad de reaccion debe de ser prioritaria.
 
+    Usado para el reto 3 y 4.
     """
 
     # Selecciona las posibles aristas donde poner cortafuegos
@@ -115,7 +129,7 @@ def select_best_edge_dynamic(
     # Se selecciona el primero de la lista como prueba
     best_edge = candidates[0]
 
-    # Para el Greedy Argmin. Solo es para el caso inicial
+    # Para el Greedy Argmin. Solo es para el caso inicial, es el infinito del estandar IEEE
     min_risk = float("inf")
 
     for edge in candidates:

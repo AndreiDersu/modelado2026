@@ -3,12 +3,21 @@ from loaddata import EJEMPLOS_GRAFOS, quickstart
 from heuristics import select_best_edge_dynamic
 from wildfire_simulator import monte_carlo
 
+"""
+Reto 4: Intelegencia para el mal
+
+La logica es practicamente la misma que la usada para el reto 3, lo unico que cambia es el objetivo del programa. 
+Ahora se corre el monte carlo para escoger la zona de peor 
+
+"""
+
 
 def experiment4(tries: int = 2_000) -> None:
     """
     Corre una simulación para los 6 grafos, usa el metodo de monte carlo para calcular la mejor zona para iniciar el fuego.
 
-    El codigo es practicamente el mismo que para el reto 3, lo unico que cambia es el objetivo final.
+    El codigo es practicamente el mismo que para el reto 3, lo unico que cambia es el objetivo al fin y al cabo, pero no hay
+    funciones o logica nueva
     """
 
     print(f"Reto 4, {tries} simulaciones de monte carlo")
@@ -20,7 +29,7 @@ def experiment4(tries: int = 2_000) -> None:
         max_damage = -1.0
         damages_per_node = np.zeros(N)
 
-        # 1. El incendiario evalúa el daño esperado para cada posible foco l
+        # El incendiario evalua laz zonas quemadas esperadas para cada posible foco l
         for l in range(N):
             rng = np.random.default_rng(seed + l)
             damage = monte_carlo(

@@ -1,6 +1,12 @@
 import numpy as np
 from numpy.typing import NDArray
 
+"""
+Funciones base reutilizadas en el reto de codigo, como el metodo para colocar cortafuegos, encontrar las aristas no dirigidas, 
+encontrar las aristas de la frontera en llamas, y el avance de cada paso de la simulacion del incendio forestal.
+
+"""
+
 
 def firecut(m: NDArray[np.float64], cuts: tuple) -> NDArray[np.float64]:
     """
@@ -58,8 +64,13 @@ def step(
     generator: np.random.Generator,
 ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
     """
-    Define el avance para cada paso de la simulación. Calcula la probabilidad de ignición a partir de I_t
+    Define el avance para cada paso de la simulación. Calcula la probabilidad de ignición a partir de I_t.
+    Por eficiencia, se usa las formula vectorizada:
 
+    P(i) = 1-prod_{j=1}^n(1-G_ij) ^ (I_tj)
+
+    Para calcular las probabilidades de que el fuego se pase. Al final se multiplica por (1-Q) para evitar
+    aquellos nodos ya quemados.
     """
 
     # Probabilidad de ignición por los vecinos activos en este paso
