@@ -3,14 +3,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 """
-
 Carga las graficas, la semilla (para los sucesos aleatorios) y las condiciones iniciales.
-
+No hay nada relevante para las solucion de los problemas aqui, los metodos son mas o menos estandar.
 """
 
-# ==============================================================================
-# CONFIGURACIÓN GENERAL
-# ==============================================================================
 RNG_SEED: int = 67
 
 # Catálogo de los 6 ejemplos de grafos disponibles en Datos/
@@ -23,7 +19,7 @@ EJEMPLOS_GRAFOS: dict[int, str] = {
     10: "graph_010_probs.txt",
 }
 
-# Lista ordenada de los grafos (permite selección por índice 0 a 5):
+# Lista ordenada de los grafos
 LISTA_GRAFOS: list[str] = [
     "graph_003_probs.txt",  # [0] Grafo 3
     "graph_004_probs.txt",  # [1] Grafo 4
@@ -33,16 +29,7 @@ LISTA_GRAFOS: list[str] = [
     "graph_010_probs.txt",  # [5] Grafo 10
 ]
 
-# ==============================================================================
-# SELECCIÓN DE LA GRÁFICA (CAMBIA AQUÍ FÁCILMENTE)
-# ==============================================================================
-# Puedes cambiar esta variable para elegir cualquiera de los 6 ejemplos:
-#   - Por ID/Número:  3, 4, 5, 7, 8, 10
-#   - Por índice:     0, 1, 2, 3, 4, 5  (0->003, 1->004, 2->005, 3->007, etc.)
-#   - Por nombre:     "graph_005_probs", "graph_005_probs.txt", "005", etc.
-# ==============================================================================
 GRAFICA_SELECCIONADA: int | str = 5
-
 
 BASE_DIR: Path = Path(__file__).resolve().parent
 
