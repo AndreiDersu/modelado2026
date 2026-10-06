@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
@@ -24,19 +25,19 @@ def wildfire(
     endtime: "int | None" = 2,
     generator: "np.random.Generator | None" = None,
     verbose: bool = False,
-    initial_node: "int | None" = None,
+    initial_node: "int | Sequence[int] | None" = None,
     with_firefighters: bool = False,
     max_steps: int = 100,
     p0: "NDArray[np.float64] | None" = None,
-) -> tuple[int, int]:
+) -> tuple[int, list[int]]:
     """
     Simula el incendio forestal usando las condiciones planteadas en el planteamiento general. Por cada intesación del tiempo t, calcula el vector de zonas quemadas Q_t, el vector de nodos con la capacidad de pasar el fuego I_t y el vector de probabilidad que se usó para I_t.
 
-    Al finalizar devuelve en numero total de zonas quemadas y el nodo en el que se inició el fuego.
+    Al finalizar devuelve en numero total de zonas quemadas y los nodos en los que se inició el fuego.
 
     Si verbose esta activado, entonces muestra en la terminal los parametros de la simulacion para cada tiempo t, util para hacer pruebas individuales.
 
-    Posteriormente, en el desarrollo del reto 3, se generalizo la funcion para poder ser utilizada tambien ahi. Se le añadieron las vairables de max_steps, with_firefighters y la posiblilidad de escoger a dedo el nodo inicial
+    Posteriormente, en el desarrollo del reto 3 y reto 5, se generalizo la funcion para poder ser utilizada tambien ahi. Se le añadieron las vairables de max_steps, with_firefighters y la posiblilidad de escoger multiples focos iniciales.
     """
 
     if generator is None:
@@ -50,22 +51,25 @@ def wildfire(
     Q: NDArray[np.int64] = np.zeros(n, dtype=np.int64)
     I_t: NDArray[np.int64] = np.zeros(n, dtype=np.int64)
 
-    # Establece la simulacion para el nodo inicial
+    # Establece la simulacion para el nodo o conjunto de nodos iniciales
     if initial_node is None:
         if p0 is not None:
             prob_0 = p0
         else:
             _, _, prob_0, _, _, _ = quickstart()
-        l_0 = int(generator.choice(n, p=prob_0))
+        l_init = [int(generator.choice(n, p=prob_0))]
+    elif isinstance(initial_node, (int, np.integer)):
+        l_init = [int(initial_node)]
     else:
-        l_0 = initial_node
+        l_init = [int(u) for u in initial_node]
 
-    Q[l_0] = 1
-    I_t[l_0] = 1
+    for u in l_init:
+        Q[u] = 1
+        I_t[u] = 1
 
     if verbose:
         print("t=0")
-        print(f"Nodo Inicial: {l_0}")
+        print(f"Nodo Inicial: {l_init}")
         print(f"Q_0 = {Q}")
         print(f"I_0 = {I_t}")
 
@@ -96,15 +100,15 @@ def wildfire(
             print(f"Bajo el vector de probabilidad: {prob}")
         t += 1
 
-    # Regresa el total de nodos quemados y el nodo del inicio del incendio
-    return int(np.sum(Q)), l_0
+    # Regresa el total de nodos quemados y los nodos del inicio del incendio
+    return int(np.sum(Q)), l_init
 
 
 def monte_carlo(
     g: NDArray[np.float64],
     tries: int = 10_000,
     endtime: "int | None" = 2,
-    initial_node: "int | None" = None,
+    initial_node: "int | Sequence[int] | None" = None,
     with_firefighters: bool = False,
     generator: "np.random.Generator | None" = None,
     p0: "NDArray[np.float64] | None" = None,

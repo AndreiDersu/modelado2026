@@ -52,6 +52,7 @@ python3 reto2.py
 python3 reto2exacto.py
 python3 reto3.py
 python3 reto4.py
+python3 reto5.py
 ```
 
 Windows:
@@ -62,6 +63,7 @@ python reto2.py
 python reto2exacto.py
 python reto3.py
 python reto4.py
+python reto5.py
 ```
 
 Tambien se puede ejecutar desde el editor de preferencia del evaluador
