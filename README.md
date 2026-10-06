@@ -14,27 +14,29 @@ aqui se adjuntan algunos comandos que deberian funcionar:
 
 Linux y Macos:
 
-´´´
+``` Bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-´´´
+
+```
 
 Powershell:
 
-´´´
+``` Powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-´´´
+
+```
 
 CMD:
 
-´´´
+``` CMD
 python -m venv venv
 venv\Scripts\activate.bat
 pip install -r requirements.txt
-´´´
+```
 
 # Correr
 
@@ -44,23 +46,23 @@ como aquella aproximada.
 
 Linux y Macos:
 
-´´´
+``` Bash
 python3 reto1.py
 python3 reto2.py
 python3 reto2exacto.py
 python3 reto3.py
 python3 reto4.py
-´´´
+```
 
 Windows:
 
-´´´
+``` Powershell
 python reto1.py
 python reto2.py
 python reto2exacto.py
 python reto3.py
 python reto4.py
-´´´
+```
 
 Tambien se puede ejecutar desde el editor de preferencia del evaluador
 
